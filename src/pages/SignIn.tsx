@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Globe } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Globe, AlertCircle } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const C = {
   bg: '#020617', surface: '#0F172A', surfaceHover: '#1E293B',
@@ -56,9 +57,38 @@ function Field({ label, id, type = 'text', placeholder, icon: Icon, value, onCha
 }
 
 export default function SignIn() {
+  const navigate = useNavigate()
+  const { signIn, signInWithGoogle } = useAuth()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (!email.trim()) { setError('Email is required.'); return }
+    if (!password) { setError('Password is required.'); return }
+
+    setLoading(true)
+    const { error: authError } = await signIn(email, password)
+    setLoading(false)
+
+    if (authError) {
+      setError(authError)
+    } else {
+      navigate('/dashboard')
+    }
+  }
+
+  const handleGoogle = async () => {
+    setError('')
+    const { error: authError } = await signInWithGoogle()
+    if (authError) setError(authError)
+  }
 
   return (
     <div style={{ width: '100%' }}>
@@ -86,9 +116,22 @@ export default function SignIn() {
         background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(20px)',
         border: `1px solid ${C.border}`, borderRadius: 24, padding: '36px 32px',
       }}>
+        {/* Error Banner */}
+        {error && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+            color: C.error, fontSize: 13,
+          }}>
+            <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
         {/* Google Button */}
         <button
           type="button"
+          onClick={handleGoogle}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`,
@@ -110,7 +153,7 @@ export default function SignIn() {
         </div>
 
         {/* Form */}
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 18 }} onSubmit={e => { e.preventDefault(); window.location.href = '/dashboard' }}>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 18 }} onSubmit={handleSubmit}>
           <Field label="Email address" id="email" type="email" placeholder="alex@university.edu" icon={Mail} value={email} onChange={setEmail} />
           <Field label="Password" id="password" type="password" placeholder="Enter your password" icon={Lock} value={password} onChange={setPassword} />
 
@@ -131,18 +174,31 @@ export default function SignIn() {
 
           <button
             type="submit"
+            disabled={loading}
             style={{
               width: '100%', height: 48, borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-              color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              background: loading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg, #4F46E5, #06B6D4)',
+              color: '#fff', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               marginTop: 4, transition: 'opacity 0.2s',
               boxShadow: '0 0 30px rgba(79,70,229,0.35)',
             }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.9' }}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            Sign In <ArrowRight size={16} />
+            {loading ? (
+              <>
+                <div style={{
+                  width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#fff', borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite'
+                }} />
+                Signing in…
+                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              </>
+            ) : (
+              <>Sign In <ArrowRight size={16} /></>
+            )}
           </button>
         </form>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, BookOpen, ArrowRight, Sparkles, Globe, Check } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, BookOpen, ArrowRight, Sparkles, Globe, Check, AlertCircle } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const C = {
   bg: '#020617', surface: '#0F172A', surfaceHover: '#1E293B',
@@ -68,9 +69,52 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function SignUp() {
+  const navigate = useNavigate()
+  const { signUp, signInWithGoogle } = useAuth()
+
   const [form, setForm] = useState({ name: '', email: '', university: '', degree: '', password: '', confirm: '' })
   const [terms, setTerms] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
+
   const set = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!form.name.trim()) { setError('Full Name is required.'); return }
+    if (!form.email.trim()) { setError('Email is required.'); return }
+    if (!form.password) { setError('Password is required.'); return }
+    if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
+    if (!terms) { setError('You must agree to the Terms of Service and Privacy Policy.'); return }
+
+    setLoading(true)
+    const { error: signUpError } = await signUp(form.email, form.password, {
+      full_name: form.name,
+      university: form.university,
+      degree: form.degree,
+    })
+    setLoading(false)
+
+    if (signUpError) {
+      setError(signUpError)
+    } else {
+      setSuccess('Account created successfully! Please check your email for a confirmation link or sign in.')
+      // If auto-confirm is enabled in Supabase, the AuthContext session state listener
+      // will trigger RedirectIfAuth and navigate to /dashboard automatically.
+    }
+  }
+
+  const handleGoogle = async () => {
+    setError('')
+    setSuccess('')
+    const { error: authError } = await signInWithGoogle()
+    if (authError) setError(authError)
+  }
 
   return (
     <div style={{ width: '100%' }}>
@@ -93,7 +137,32 @@ export default function SignUp() {
         background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(20px)',
         border: `1px solid ${C.border}`, borderRadius: 24, padding: '32px 28px',
       }}>
+        {/* Error Banner */}
+        {error && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+            color: C.error, fontSize: 13,
+          }}>
+            <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
+        {/* Success Banner */}
+        {success && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+            color: C.success, fontSize: 13,
+          }}>
+            <Check size={16} /> {success}
+          </div>
+        )}
+
         <button type="button"
+          onClick={handleGoogle}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`,
@@ -112,8 +181,7 @@ export default function SignUp() {
           <div style={{ flex: 1, height: 1, background: C.border }} />
         </div>
 
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-          onSubmit={e => { e.preventDefault(); window.location.href = '/dashboard' }}>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }} onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <Field label="Full Name" id="name" placeholder="Alex Johnson" icon={User} value={form.name} onChange={set('name')} />
             <Field label="Email" id="email" type="email" placeholder="alex@uni.edu" icon={Mail} value={form.email} onChange={set('email')} />
@@ -127,17 +195,20 @@ export default function SignUp() {
           <Field label="Confirm Password" id="confirm" type="password" placeholder="Repeat your password" icon={Lock} value={form.confirm} onChange={set('confirm')} />
 
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginTop: 4 }}>
-            <div
-              onClick={() => setTerms(!terms)}
+            <input
+              type="checkbox"
+              id="terms"
+              checked={terms}
+              onChange={e => setTerms(e.target.checked)}
               style={{
-                width: 18, height: 18, borderRadius: 5, border: `2px solid ${terms ? C.primary : C.border}`,
-                background: terms ? C.primary : 'transparent', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s', cursor: 'pointer', marginTop: 1,
+                width: 18,
+                height: 18,
+                accentColor: C.primary,
+                cursor: 'pointer',
+                marginTop: 2,
+                flexShrink: 0,
               }}
-            >
-              {terms && <Check size={11} color="#fff" strokeWidth={3} />}
-            </div>
+            />
             <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5 }}>
               I agree to the{' '}
               <a href="#" style={{ color: C.secondary, textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a>
@@ -147,17 +218,30 @@ export default function SignUp() {
           </label>
 
           <button type="submit"
+            disabled={loading}
             style={{
               width: '100%', height: 48, borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-              color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              background: loading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg, #4F46E5, #06B6D4)',
+              color: '#fff', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               marginTop: 4, boxShadow: '0 0 30px rgba(79,70,229,0.3)',
             }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.9' }}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            Create Account <ArrowRight size={16} />
+            {loading ? (
+              <>
+                <div style={{
+                  width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#fff', borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite'
+                }} />
+                Creating Account…
+                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              </>
+            ) : (
+              <>Create Account <ArrowRight size={16} /></>
+            )}
           </button>
         </form>
 

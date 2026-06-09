@@ -76,7 +76,7 @@ export function Navbar() {
 
             <Link to="/signup" className="inline-flex">
               <Button size="sm" className="gradient-primary">
-                Get Started
+                Sign Up
               </Button>
             </Link>
           </div>
@@ -137,7 +137,7 @@ export function Navbar() {
             </Link>
             <Link to="/signup" onClick={() => setIsOpen(false)} className="w-full">
               <Button className="w-full h-11 gradient-primary">
-                Get Started
+                Sign Up
               </Button>
             </Link>
           </div>

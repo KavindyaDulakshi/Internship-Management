@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { User, Bell, Shield, Palette, Moon, Sun, Globe } from 'lucide-react'
+import { User, Bell, Shield, Palette, Moon, Sun, Globe, AlertCircle, Check } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const C = {
   surface: '#0F172A', surfaceHover: '#1E293B', border: 'rgba(255,255,255,0.08)',
@@ -53,6 +55,17 @@ function SettingRow({ label, desc, children }: { label: string, desc?: string, c
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme()
+  const { user } = useAuth()
+
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.fullName || '')
+  const [email] = useState(user?.email || '')
+  const [university, setUniversity] = useState(user?.user_metadata?.university || '')
+  const [degree, setDegree] = useState(user?.user_metadata?.degree || '')
+  
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [error, setError] = useState('')
+
   const [notifs, setNotifs] = useState({ email: true, matches: true, reminders: false, newsletter: false })
   const [privacy, setPrivacy] = useState({ publicProfile: true, showEmail: false, analytics: true })
 
@@ -62,6 +75,31 @@ export default function Settings() {
     padding: '0 12px', outline: 'none', width: 240, boxSizing: 'border-box' as const,
   }
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName,
+          university,
+          degree,
+        }
+      })
+      if (updateError) {
+        setError(updateError.message)
+      } else {
+        setSuccess('Profile updated successfully!')
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 760 }}>
       <div>
@@ -69,29 +107,59 @@ export default function Settings() {
         <p style={{ fontSize: 14, color: C.textSecondary }}>Manage your account preferences and platform settings.</p>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: 12, padding: '12px 16px',
+          color: '#EF4444', fontSize: 13,
+        }}>
+          <AlertCircle size={16} /> {error}
+        </div>
+      )}
+
+      {/* Success Banner */}
+      {success && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+          borderRadius: 12, padding: '12px 16px',
+          color: '#10B981', fontSize: 13,
+        }}>
+          <Check size={16} /> {success}
+        </div>
+      )}
+
       {/* Account Settings */}
       <Section title="Account Information" icon={User}>
-        <SettingRow label="Full Name" desc="Your display name across InternHub">
-          <input defaultValue="Alex Johnson" style={inputStyle} />
-        </SettingRow>
-        <SettingRow label="Email Address" desc="Used for login and notifications">
-          <input defaultValue="alex.johnson@university.edu" type="email" style={inputStyle} />
-        </SettingRow>
-        <SettingRow label="University" desc="Your current academic institution">
-          <input defaultValue="Stanford University" style={inputStyle} />
-        </SettingRow>
-        <SettingRow label="Degree Program">
-          <input defaultValue="B.Sc. Computer Science" style={inputStyle} />
-        </SettingRow>
-        <div style={{ padding: '16px 24px' }}>
-          <button style={{
-            background: 'linear-gradient(135deg, #4F46E5, #06B6D4)', border: 'none',
-            borderRadius: 10, color: '#fff', padding: '10px 22px', fontSize: 13,
-            fontWeight: 700, cursor: 'pointer',
-          }}>
-            Save Changes
-          </button>
-        </div>
+        <form onSubmit={handleSave}>
+          <SettingRow label="Full Name" desc="Your display name across InternHub">
+            <input value={fullName} onChange={e => setFullName(e.target.value)} style={inputStyle} />
+          </SettingRow>
+          <SettingRow label="Email Address" desc="Used for login (read-only)">
+            <input value={email} readOnly disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
+          </SettingRow>
+          <SettingRow label="University" desc="Your current academic institution">
+            <input value={university} onChange={e => setUniversity(e.target.value)} style={inputStyle} />
+          </SettingRow>
+          <SettingRow label="Degree Program">
+            <input value={degree} onChange={e => setDegree(e.target.value)} style={inputStyle} />
+          </SettingRow>
+          <div style={{ padding: '16px 24px' }}>
+            <button 
+              type="submit"
+              disabled={loading}
+              style={{
+                background: loading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg, #4F46E5, #06B6D4)', border: 'none',
+                borderRadius: 10, color: '#fff', padding: '10px 22px', fontSize: 13,
+                fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </Section>
 
       {/* Appearance */}

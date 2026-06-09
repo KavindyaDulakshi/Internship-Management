@@ -198,7 +198,7 @@ export default function Landing() {
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.9'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)' }}
             >
-              Get Started <ArrowRight size={16} />
+              Sign Up <ArrowRight size={16} />
             </button>
           </Link>
           <Link to="/internships" style={{ textDecoration: 'none' }}>

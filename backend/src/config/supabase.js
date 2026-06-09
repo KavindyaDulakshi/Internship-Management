@@ -1,0 +1,26 @@
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn(
+    'WARNING: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not defined in the environment. ' +
+    'Please configure them in your .env file to enable database and auth features.'
+  );
+}
+
+// Initialize the Supabase client using the service role key to bypass RLS for administrative backend operations
+const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseServiceKey || 'placeholder-key',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  }
+);
+
+module.exports = { supabase };

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Briefcase, FileText, Video, Map,
   User, Settings, Bell, Search, LogOut, ChevronLeft, ChevronRight,
-  Sparkles, Menu, X,
+  Sparkles, Menu, X, Award,
 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const C = {
   bg: '#020617', surface: '#0F172A', surfaceHover: '#1E293B',
@@ -18,6 +19,7 @@ const NAV = [
   { to: '/resume-analyzer', icon: FileText, label: 'Resume Analyzer' },
   { to: '/interview', icon: Video, label: 'Mock Interview' },
   { to: '/roadmap', icon: Map, label: 'Career Roadmap' },
+  { to: '/quiz', icon: Award, label: 'Skills Quiz' },
 ]
 const NAV_BOTTOM = [
   { to: '/profile', icon: User, label: 'Profile' },
@@ -25,6 +27,7 @@ const NAV_BOTTOM = [
 ]
 
 function SidebarContent({ collapsed, onClose }: { collapsed: boolean, onClose?: () => void }) {
+  const { signOut } = useAuth()
   return (
     <div style={{
       width: collapsed ? 72 : 240, height: '100%',
@@ -33,11 +36,13 @@ function SidebarContent({ collapsed, onClose }: { collapsed: boolean, onClose?: 
       transition: 'width 0.3s ease', overflow: 'hidden', flexShrink: 0,
     }}>
       {/* Logo */}
-      <div style={{
+      <Link to="/dashboard" onClick={onClose} style={{
         height: 64, display: 'flex', alignItems: 'center',
         padding: collapsed ? '0 18px' : '0 20px',
         borderBottom: `1px solid ${C.border}`,
         gap: 10, overflow: 'hidden',
+        textDecoration: 'none',
+        cursor: 'pointer'
       }}>
         <div style={{
           width: 34, height: 34, borderRadius: 10, flexShrink: 0,
@@ -51,7 +56,7 @@ function SidebarContent({ collapsed, onClose }: { collapsed: boolean, onClose?: 
             InternHub
           </span>
         )}
-      </div>
+      </Link>
 
       {/* Main Nav */}
       <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -110,6 +115,7 @@ function SidebarContent({ collapsed, onClose }: { collapsed: boolean, onClose?: 
         ))}
         {/* Logout */}
         <div
+          onClick={signOut}
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: collapsed ? '10px 18px' : '10px 12px',
@@ -132,6 +138,7 @@ export function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: C.bg, color: C.textPrimary, position: 'relative' }}>
@@ -243,10 +250,18 @@ export function ProtectedLayout() {
                 background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 800, color: '#fff',
-              }}>AJ</div>
+              }}>
+                {user?.user_metadata?.full_name
+                  ? user.user_metadata.full_name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase()
+                  : user?.email?.substring(0, 2).toUpperCase() || 'U'}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>Alex Johnson</span>
-                <span style={{ fontSize: 11, color: C.textMuted }}>Stanford University</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.2 }}>
+                  {user?.user_metadata?.full_name || user?.email || 'User'}
+                </span>
+                <span style={{ fontSize: 11, color: C.textMuted }}>
+                  {user?.user_metadata?.university || 'University'}
+                </span>
               </div>
             </div>
           </div>

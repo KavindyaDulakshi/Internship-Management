@@ -99,3 +99,57 @@ export const internshipApi = {
       `/api/internships/${id}/save`
     ),
 }
+
+// ─── AI Assessment API ────────────────────────────────────────────────────────
+
+export interface AIMockQuestion {
+  id: string
+  category: string
+  difficulty: string
+  question: string
+  timeLimit: number
+  tips: string[]
+  sampleAnswer: string
+}
+
+export interface AIInterviewResponse {
+  status: string
+  data: {
+    questions: AIMockQuestion[]
+  }
+}
+
+export interface AIEvaluationResponse {
+  status: string
+  data: {
+    aiScore: number
+    aiFeedback: string
+    sampleAnswer: string
+  }
+}
+
+export interface AIQuizQuestion {
+  id: string
+  question: string
+  options: string[]
+  correctAnswer: string
+  explanation: string
+}
+
+export interface AIQuizResponse {
+  status: string
+  data: {
+    questions: AIQuizQuestion[]
+  }
+}
+
+export const aiApi = {
+  generateInterview: (category: string, difficulty: string, skill: string) =>
+    request<AIInterviewResponse>('POST', '/api/ai/interview/generate', { category, difficulty, skill }),
+
+  evaluateAnswer: (question: string, answer: string) =>
+    request<AIEvaluationResponse>('POST', '/api/ai/interview/evaluate', { question, answer }),
+
+  generateQuiz: (skill: string, difficulty: string) =>
+    request<AIQuizResponse>('POST', '/api/ai/quiz/generate', { skill, difficulty }),
+}

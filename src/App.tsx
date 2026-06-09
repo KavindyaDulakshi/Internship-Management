@@ -1,3 +1,4 @@
+import { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -15,9 +16,10 @@ import MockInterview from './pages/MockInterview'
 import CareerRoadmap from './pages/CareerRoadmap'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
+import Quiz from './pages/Quiz'
 
 // Guard: redirect to /signin if not authenticated
-function RequireAuth({ children }: { children: JSX.Element }) {
+function RequireAuth({ children }: { children: ReactNode }): any {
   const { user, loading } = useAuth()
   if (loading) {
     return (
@@ -40,7 +42,7 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 }
 
 // Guard: redirect to /dashboard if already authenticated
-function RedirectIfAuth({ children }: { children: JSX.Element }) {
+function RedirectIfAuth({ children }: { children: ReactNode }): any {
   const { user, loading } = useAuth()
   if (loading) return null
   return user ? <Navigate to="/dashboard" replace /> : children
@@ -75,6 +77,7 @@ function AppRoutes() {
         <Route path="/roadmap" element={<CareerRoadmap />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/quiz" element={<Quiz />} />
       </Route>
 
       {/* Fallback */}

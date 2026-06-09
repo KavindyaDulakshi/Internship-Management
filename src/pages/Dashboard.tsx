@@ -1,6 +1,9 @@
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { mockUser, mockApplications, mockInternships } from '../data/mockData'
 import { TrendingUp, Briefcase, FileText, Users, ArrowRight, CheckCircle, Clock, XCircle, Star } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts'
 
 const C = {
   surface: '#0F172A', surfaceHover: '#1E293B', border: 'rgba(255,255,255,0.08)',
@@ -48,8 +51,60 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+const trendData = [
+  { name: 'Wk 1', Applications: 1, Interviews: 0 },
+  { name: 'Wk 2', Applications: 3, Interviews: 1 },
+  { name: 'Wk 3', Applications: 5, Interviews: 1 },
+  { name: 'Wk 4', Applications: 7, Interviews: 2 },
+]
+
+function useContainerDimensions() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    if (!ref.current) return
+
+    const observeTarget = ref.current
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return
+      const entry = entries[0]
+      const width = entry.contentRect.width
+      const height = entry.contentRect.height
+      if (width > 0 && height > 0) {
+        setDimensions({ width, height })
+      }
+    })
+
+    resizeObserver.observe(observeTarget)
+
+    const rect = observeTarget.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      setDimensions({ width: rect.width, height: rect.height })
+    }
+
+    return () => {
+      resizeObserver.unobserve(observeTarget)
+    }
+  }, [])
+
+  return [ref, dimensions] as const
+}
+
 export default function Dashboard() {
+  const [trendContainerRef, trendDim] = useContainerDimensions()
+  const [skillsContainerRef, skillsDim] = useContainerDimensions()
+
+  const { user } = useAuth()
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.fullName || user?.email || 'User'
+  const firstName = name.split(' ').filter(Boolean)[0] || 'User'
   const topMatches = mockInternships.slice(0, 3)
+
+  const chartSkillsData = mockUser.skills.map((s, i) => ({
+    name: s.name,
+    Level: s.level,
+    fill: ['#4F46E5', '#06B6D4', '#3B82F6', '#8B5CF6', '#10B981', '#F59E0B'][i % 6]
+  }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -58,7 +113,7 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.textPrimary, marginBottom: 6, letterSpacing: '-0.02em' }}>
-            Good evening, {mockUser.name.split(' ')[0]} 👋
+            Good evening, {firstName} 👋
           </h1>
           <p style={{ fontSize: 14, color: C.textSecondary }}>
             Here's your career progress for this week — keep going!
@@ -70,41 +125,60 @@ export default function Dashboard() {
             background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
             border: 'none', borderRadius: 12, color: '#fff',
             padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(79,70,229,0.25)',
           }}>
-            Browse Internships <ArrowRight size={15} />
+            Explore Jobs <ArrowRight size={15} />
           </button>
         </Link>
       </div>
 
-      {/* Score Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        {[
-          { label: 'Internship Match Score', score: mockUser.matchScore, color: C.primary, icon: TrendingUp, sub: 'Top 8% match rate' },
-          { label: 'Resume ATS Score', score: mockUser.atsScore, color: C.secondary, icon: FileText, sub: '+12% vs last upload' },
-          { label: 'Interview Readiness', score: mockUser.interviewScore, color: '#8B5CF6', icon: Users, sub: 'Great progress!' },
-        ].map((item, i) => {
-          const Icon = item.icon
-          return (
-            <div key={i} style={{
-              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
-              padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 12, textAlign: 'center',
+      {/* Stats cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+        {/* Recommended count card */}
+        <div style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
+          padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, background: 'rgba(79,70,229,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary,
             }}>
-              <div style={{ position: 'relative' }}>
-                <ScoreRing score={item.score} color={item.color} size={90} />
-                <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon size={18} color={item.color} style={{ marginTop: -2 }} />
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{item.label}</div>
-                <div style={{ fontSize: 11, color: item.color, marginTop: 3, fontWeight: 500 }}>{item.sub}</div>
-              </div>
+              <Briefcase size={20} />
             </div>
-          )
-        })}
+            <div>
+              <div style={{ fontSize: 12, color: C.textSecondary, fontWeight: 600 }}>Recommended</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary }}>24 Jobs</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: C.textMuted }}>Matches your Profile & Skills</div>
+        </div>
+
+        {/* ATS Score card */}
+        <div style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
+          padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: C.textSecondary, fontWeight: 600 }}>ATS Resume Score</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginTop: 4 }}>85/100</div>
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>Strong Match</div>
+          </div>
+          <ScoreRing score={85} color={C.secondary} />
+        </div>
+
+        {/* Mock Interview count card */}
+        <div style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
+          padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: C.textSecondary, fontWeight: 600 }}>Interview Readiness</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginTop: 4 }}>72/100</div>
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>Average Feedback</div>
+          </div>
+          <ScoreRing score={72} color={C.primary} />
+        </div>
 
         {/* Applications count card */}
         <div style={{
@@ -118,6 +192,68 @@ export default function Dashboard() {
             {[C.secondary, C.warning, C.primary, C.error].map((c, i) => (
               <div key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: c, opacity: 0.7 }} />
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics & Insights */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+        {/* Weekly Trend Area Chart */}
+        <div style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
+          padding: '24px 20px', minHeight: 300, display: 'flex', flexDirection: 'column',
+          minWidth: 0
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, marginBottom: 16 }}>Weekly Application Trend</h3>
+          <div ref={trendContainerRef} style={{ flex: 1, width: '100%', height: 220, minWidth: 0 }}>
+            {trendDim.width > 0 && trendDim.height > 0 && (
+              <AreaChart width={trendDim.width} height={trendDim.height} data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={C.secondary} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={C.secondary} stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorInts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={C.primary} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={C.primary} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="name" stroke={C.textMuted} fontSize={11} tickLine={false} />
+                <YAxis stroke={C.textMuted} fontSize={11} tickLine={false} />
+                <Tooltip 
+                  contentStyle={{ background: '#0F172A', border: `1px solid ${C.border}`, borderRadius: 8, color: '#fff', fontSize: 12 }} 
+                  itemStyle={{ color: C.textSecondary }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, color: C.textSecondary, paddingTop: 10 }} />
+                <Area type="monotone" dataKey="Applications" stroke={C.secondary} strokeWidth={2} fillOpacity={1} fill="url(#colorApps)" />
+                <Area type="monotone" dataKey="Interviews" stroke={C.primary} strokeWidth={2} fillOpacity={1} fill="url(#colorInts)" />
+              </AreaChart>
+            )}
+          </div>
+        </div>
+
+        {/* Skill Levels Bar Chart */}
+        <div style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20,
+          padding: '24px 20px', minHeight: 300, display: 'flex', flexDirection: 'column',
+          minWidth: 0
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, marginBottom: 16 }}>Core Skills Proficiency</h3>
+          <div ref={skillsContainerRef} style={{ flex: 1, width: '100%', height: 220, minWidth: 0 }}>
+            {skillsDim.width > 0 && skillsDim.height > 0 && (
+              <BarChart width={skillsDim.width} height={skillsDim.height} data={chartSkillsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="name" stroke={C.textMuted} fontSize={11} tickLine={false} />
+                <YAxis stroke={C.textMuted} fontSize={11} tickLine={false} domain={[0, 100]} />
+                <Tooltip 
+                  contentStyle={{ background: '#0F172A', border: `1px solid ${C.border}`, borderRadius: 8, color: '#fff', fontSize: 12 }}
+                  itemStyle={{ color: C.textSecondary }}
+                  cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                />
+                <Bar dataKey="Level" radius={[4, 4, 0, 0]} barSize={26} />
+              </BarChart>
+            )}
           </div>
         </div>
       </div>

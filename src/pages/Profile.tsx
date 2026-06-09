@@ -1,5 +1,7 @@
 import { mockUser, mockInternshipHistory } from '../data/mockData'
 import { MapPin, Mail, GraduationCap, Briefcase, Award, FileText, Edit3 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const C = {
   surface: '#0F172A', surfaceHover: '#1E293B', border: 'rgba(255,255,255,0.08)',
@@ -9,6 +11,23 @@ const C = {
 }
 
 export default function Profile() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.fullName || user?.email || 'User'
+  const email = user?.email || ''
+  const university = user?.user_metadata?.university || 'University'
+  const degree = user?.user_metadata?.degree || 'Degree Program'
+  const location = user?.user_metadata?.location || mockUser.location
+  const bio = user?.user_metadata?.bio || mockUser.bio
+
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase() || 'U'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Profile Header Card */}
@@ -39,15 +58,17 @@ export default function Profile() {
               fontSize: 32, fontWeight: 900, color: '#fff', overflow: 'hidden',
               flexShrink: 0,
             }}>
-              {mockUser.name.split(' ').map(n => n[0]).join('')}
+              {initials}
             </div>
-            <button style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              background: 'transparent', border: `1px solid ${C.border}`,
-              borderRadius: 10, color: C.textSecondary, padding: '8px 14px',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              transition: 'all 0.2s', marginBottom: 4,
-            }}
+            <button 
+              onClick={() => navigate('/settings')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                borderRadius: 10, color: C.textSecondary, padding: '8px 14px',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.2s', marginBottom: 4,
+              }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = C.textPrimary }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; (e.currentTarget as HTMLButtonElement).style.color = C.textSecondary }}
             >
@@ -57,20 +78,20 @@ export default function Profile() {
 
           {/* Name & Info */}
           <div style={{ marginTop: 14 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 4 }}>{mockUser.name}</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 4 }}>{name}</h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 8 }}>
               {[
-                { icon: GraduationCap, text: mockUser.university },
-                { icon: Briefcase, text: mockUser.degree },
-                { icon: MapPin, text: mockUser.location },
-                { icon: Mail, text: mockUser.email },
+                { icon: GraduationCap, text: university },
+                { icon: Briefcase, text: degree },
+                { icon: MapPin, text: location },
+                { icon: Mail, text: email },
               ].map(({ icon: Icon, text }) => (
                 <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.textSecondary }}>
                   <Icon size={13} color={C.textMuted} /> {text}
                 </span>
               ))}
             </div>
-            <p style={{ fontSize: 14, color: C.textSecondary, marginTop: 12, lineHeight: 1.65, maxWidth: 600 }}>{mockUser.bio}</p>
+            <p style={{ fontSize: 14, color: C.textSecondary, marginTop: 12, lineHeight: 1.65, maxWidth: 600 }}>{bio}</p>
           </div>
 
           {/* Quick Stats */}
